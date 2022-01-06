@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<!-- Based on https://developer.mozilla.org/en-US/docs/Web/API/Element/mousemove_event#examples -->
+<!-- Modified by Lukas S on 2021-01-05 -->
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mousemove event tester</title>
+  <style>
+    :root {
+      --command-bar-height: 4rem;
+    }
+
+    html {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      position: relative;
+      padding: 0;
+      margin: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    canvas {
+      /**border: 1px solid black;
+      width: 1900px;
+      height: 900px;**/
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    #header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--command-bar-height);
+      display: flex;
+      flex-flow: row nowrap;
+      align-items: baseline;
+      margin-bottom: 1rem;
+    }
+
+    .header-title {
+      margin-top: 0;
+      margin-bottom: 0;
+    }
+
+    .header>*:not(:last-child) {
+      margin-right: 1rem;
+    }
+
+    .flex-end {
+      margin-left: auto;
+    }
+
+    #content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      box-sizing: border-box;
+    }
+
+    #canvas-container {
+      position: absolute;
+      top: var(--command-bar-height);
+      left: 0;
+      right: 0;
+      bottom: 0;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="content">
+    <header id="header">
+      <h1 class="header-title">Drawing with mouse events</h1>
+      <p><small>Hold down the left mouse button on the canvas and move the cursor to draw.</small></p>
+      <button id="drawCirclesInner" class="flex-end">Draw inner circles</button>
+      <button id="drawCirclesOuter">Draw outer circles</button>
+      <button id="clearCanvas">Clear canvas</button>
+      <button id="resizeCanvas">Resize canvas</button>
+      <button id="toggleControlBar">Hide control bar</button>
+      <button id="toggleFullscreen">Fullscreen</button>
+    </header>
+    <div id="canvas-container">
+      <canvas id="myPics" width="640" height="480"></canvas>
+    </div>
+  </div>
+  <script>
+    // When true, moving the mouse draws on the canvas
+    let isDrawing = false;
+    let x = 0;
+    let y = 0;
+
+    const myPics = document.getElementById('myPics');
+    const canvasContainer = document.getElementById("canvas-container");
+    const context = myPics.getContext('2d');
+    const content = document.getElementById("content");
+
+    // event.offsetX, event.offsetY gives the (x,y) offset from the edge of the canvas.
+
+    // Add the event listeners for mousedown, mousemove, and mouseup
+    myPics.addEventListener('mousedown', e => {
+      x = e.offsetX;
+      y = e.offsetY;
+      isDrawing = true;
+    });
+
+    myPics.addEventListener('mousemove', e => {
+      if (!isDrawing)
+        return;
+      drawLine(context, x, y, e.offsetX, e.offsetY);
+      x = e.offsetX;
+      y = e.offsetY;
+    });
+
+    window.addEventListener('mouseup', e => {
+      if (!isDrawing)
+        return;
+      drawLine(context, x, y, e.offsetX, e.offsetY);
+      x = 0;
+      y = 0;
+      isDrawing = false;
+    });
+
+    function resizeCanvas(container, canvas) {
+      const containerRect = container.getBoundingClientRect();
+      canvas.width = containerRect.width;
+      canvas.height = containerRect.height;
+    }
+
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+        return;
+      }
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        return;
+      }
+      throw new Error("Unhandled fullscreen state");
+    }
+
+    function drawLine(context, x1, y1, x2, y2) {
+      context.beginPath();
+      context.strokeStyle = 'black';
+      context.lineWidth = 1;
+      context.moveTo(x1, y1);
+      context.lineTo(x2, y2);
+      context.stroke();
+      context.closePath();
+    }
+
+    function clear(canvas, context) {
+      context.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawCircle(context, positionX, positionY, radius, color = "blue") {
+      context.beginPath();
+      context.arc(positionX, positionY, radius, 0, 2 * Math.PI, false);
+      context.fillStyle = color;
+      context.fill();
+    }
+
+    function drawCircleGrid(margin, canvas, context, color) {
+      const left = 0;
+      const center = canvas.width / 2;
+      const right = canvas.width;
+      const top = 0;
+      const middle = canvas.height / 2;
+      const bottom = canvas.height;
+      const positions = [
+        { x: left + margin, y: top + margin },
+        { x: center, y: top + margin },
+        { x: right - margin, y: top + margin },
+        { x: left + margin, y: middle },
+        { x: center, y: middle },
+        { x: right - margin, y: middle },
+        { x: left + margin, y: bottom - margin },
+        { x: center, y: bottom - margin },
+        { x: right - margin, y: bottom - margin },
+      ];
+      for (const position of positions)
+        drawCircle(context, position.x, position.y, 8, color);
+    }
+
+    const clearButton = document.getElementById("clearCanvas");
+    clearButton.addEventListener("click", function () {
+      clear(myPics, context);
+    });
+
+    const innerCircleDrawerButton = document.getElementById("drawCirclesInner");
+    innerCircleDrawerButton.addEventListener("click", function () {
+      drawCircleGrid(160, myPics, context, "green")
+    });
+
+    const outerCircleDrawerButton = document.getElementById("drawCirclesOuter");
+    outerCircleDrawerButton.addEventListener("click", function () {
+      drawCircleGrid(10, myPics, context, "orange")
+    });
+
+    const toggleFullscreenButton = document.getElementById("toggleFullscreen");
+    toggleFullscreenButton.addEventListener("click", () => {
+      toggleFullscreen();
+      resizeCanvas(canvasContainer, myPics);
+    });
+
+    resizeCanvas(canvasContainer, myPics);
+  </script>
+</body>
+
+</html>
