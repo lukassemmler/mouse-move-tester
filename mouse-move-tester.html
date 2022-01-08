@@ -40,21 +40,46 @@
       height: var(--command-bar-height);
       display: flex;
       flex-flow: row nowrap;
-      align-items: baseline;
+      align-items: center;
       margin-bottom: 1rem;
+      box-sizing: border-box;
+      padding: 1rem;
+      box-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.15);
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .hidden,
+    #header.hidden {
+      display: none;
     }
 
     .header-title {
+      display: none;
       margin-top: 0;
       margin-bottom: 0;
+      font-size: 1rem;
+      min-width: 7em;
     }
 
-    .header>*:not(:last-child) {
+    .header-info {
+      display: none;
+    }
+
+    #header>*:not(:last-child) {
       margin-right: 1rem;
     }
 
     .flex-end {
       margin-left: auto;
+    }
+
+    button {
+      line-height: 1;
+      height: 2rem;
+      min-width: 6em;
+      padding-left: 0.4em;
+      padding-right: 0.4em;
     }
 
     #content {
@@ -73,6 +98,52 @@
       right: 0;
       bottom: 0;
     }
+
+    #header.hidden + #canvas-container {
+      top: 0;
+    }
+
+    .command-list {
+      display: flex;
+      flex-flow: row nowrap;
+    }
+
+    .command-list>*:not(:last-child) {
+      margin-right: 0.5rem;
+    }
+
+    @media screen and (min-width: 361px) {
+      .header-title {
+        display: block;
+      }
+    }
+
+    @media screen and (min-width: 961px) {
+      .header-info {
+        display: block;
+      }
+    }
+
+    #command-bar-note {
+      position: absolute;
+      top: 1rem;
+      left: 50%;
+      margin-left: -9.5em;
+      width: 19em;
+      background-color: black;
+      color: white;
+      pointer-events: none;
+      opacity: 0.25;
+      padding: 0.5rem 1rem;
+      border-radius: 10rem;
+      box-sizing: border-box;
+    }
+
+    #command-bar-note-text {
+      margin: 0;
+      text-align: center;
+      font-size: 0.8rem;
+    }
   </style>
 </head>
 
@@ -80,16 +151,22 @@
   <div id="content">
     <header id="header">
       <h1 class="header-title">Drawing with mouse events</h1>
-      <p><small>Hold down the left mouse button on the canvas and move the cursor to draw.</small></p>
-      <button id="drawCirclesInner" class="flex-end">Draw inner circles</button>
-      <button id="drawCirclesOuter">Draw outer circles</button>
-      <button id="clearCanvas">Clear canvas</button>
-      <button id="resizeCanvas">Resize canvas</button>
-      <button id="toggleControlBar">Hide control bar</button>
-      <button id="toggleFullscreen">Fullscreen</button>
+      <p class="header-info"><small>Hold down the left mouse button on the canvas and move the cursor to draw.</small>
+      </p>
+      <div class="command-list flex-end">
+        <button id="drawCirclesInner">Draw inner circles</button>
+        <button id="drawCirclesOuter">Draw outer circles</button>
+        <button id="clearCanvas">Clear canvas</button>
+        <button id="resizeCanvas">Resize canvas</button>
+        <button id="hideControlBar">Hide control bar</button>
+        <button id="toggleFullscreen">Fullscreen</button>
+      </div>
     </header>
     <div id="canvas-container">
-      <canvas id="myPics" width="640" height="480"></canvas>
+      <aside id="command-bar-note">
+        <p id="command-bar-note-text">To show command bar, double click on canvas.</p>
+      </aside>
+      <canvas id="my-pics" width="640" height="480"></canvas>
     </div>
   </div>
   <script>
@@ -98,10 +175,12 @@
     let x = 0;
     let y = 0;
 
-    const myPics = document.getElementById('myPics');
+    const myPics = document.getElementById('my-pics');
     const canvasContainer = document.getElementById("canvas-container");
     const context = myPics.getContext('2d');
     const content = document.getElementById("content");
+    const header = document.getElementById("header");
+    const commandBarNote = document.getElementById("command-bar-note");
 
     // event.offsetX, event.offsetY gives the (x,y) offset from the edge of the canvas.
 
@@ -118,6 +197,11 @@
       drawLine(context, x, y, e.offsetX, e.offsetY);
       x = e.offsetX;
       y = e.offsetY;
+    });
+
+    myPics.addEventListener("dblclick", event => {
+      showHeader();
+      resizeCanvas(canvasContainer, myPics);
     });
 
     window.addEventListener('mouseup', e => {
@@ -190,6 +274,33 @@
         drawCircle(context, position.x, position.y, 8, color);
     }
 
+    function drawInnerCircles() {
+      const relativeMarginWidth = myPics.width * 0.15;
+      const relativeMarginHeight = myPics.height * 0.15;
+      const relativeMargin = Math.min(relativeMarginWidth, relativeMarginHeight);
+      drawCircleGrid(relativeMargin, myPics, context, "green")
+    }
+
+    function drawOuterCircles() {
+      drawCircleGrid(10, myPics, context, "orange")
+    }
+
+    function hideHeader() {
+      const HIDDEN_CLASS = "hidden";
+      if (header.classList.contains(HIDDEN_CLASS))
+        throw new Error("Trying to hide header, but it is already hidden. ");
+      header.classList.add(HIDDEN_CLASS);
+      commandBarNote.classList.remove(HIDDEN_CLASS);
+    }
+    
+    function showHeader() {
+      const HIDDEN_CLASS = "hidden";
+      if (!header.classList.contains(HIDDEN_CLASS))
+        throw new Error("Trying to show header, but it is already visible. ");
+      header.classList.remove(HIDDEN_CLASS);
+      commandBarNote.classList.add(HIDDEN_CLASS);
+    }
+
     const clearButton = document.getElementById("clearCanvas");
     clearButton.addEventListener("click", function () {
       clear(myPics, context);
@@ -197,12 +308,12 @@
 
     const innerCircleDrawerButton = document.getElementById("drawCirclesInner");
     innerCircleDrawerButton.addEventListener("click", function () {
-      drawCircleGrid(160, myPics, context, "green")
+      drawInnerCircles();
     });
 
     const outerCircleDrawerButton = document.getElementById("drawCirclesOuter");
     outerCircleDrawerButton.addEventListener("click", function () {
-      drawCircleGrid(10, myPics, context, "orange")
+      drawOuterCircles();
     });
 
     const toggleFullscreenButton = document.getElementById("toggleFullscreen");
@@ -211,7 +322,21 @@
       resizeCanvas(canvasContainer, myPics);
     });
 
+    const resizeCanvasButton = document.getElementById("resizeCanvas");
+    resizeCanvasButton.addEventListener("click", () => {
+      resizeCanvas(canvasContainer, myPics);
+      drawInnerCircles();
+    });
+
+    const hideControlBarButton = document.getElementById("hideControlBar");
+    hideControlBarButton.addEventListener("click", () => {
+      hideHeader();
+      resizeCanvas(canvasContainer, myPics);
+    });
+
     resizeCanvas(canvasContainer, myPics);
+    drawInnerCircles();
+    commandBarNote.classList.add("hidden");
   </script>
 </body>
 
